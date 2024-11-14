@@ -59,13 +59,11 @@ class Analytics:
             
             total_sales = len(sales)
             
-            # Calcular ingresos totales usando el precio de la orden
+            # Calcular ingresos totales usando el precio real de la transacción
             total_revenue = sum(
-                sum(
-                    float(item.get('unit_price', 0)) * float(item.get('quantity', 1))
-                    for item in order.get('order_items', [])
-                )
+                float(order.get('payments', [{}])[0].get('transaction_amount', 0))
                 for order in sales
+                if order.get('payments')
             )
             
             # Calcular total de items
@@ -82,7 +80,7 @@ class Analytics:
             
             return {
                 'total_sales': total_sales,  # Número de órdenes
-                'total_revenue': total_revenue,  # Ingreso total
+                'total_revenue': total_revenue,  # Ingreso total real
                 'avg_price': avg_price,  # Precio promedio por item
                 'total_items': total_items  # Cantidad total de items
             }
@@ -127,11 +125,8 @@ class Analytics:
                     order['date_created'].replace('Z', '+00:00')
                 ).replace(tzinfo=None)
                 
-                # Calcular el total real de la orden
-                order_total = sum(
-                    float(item.get('unit_price', 0)) * float(item.get('quantity', 1))
-                    for item in order.get('order_items', [])
-                )
+                # Obtener el monto real pagado de la transacción
+                transaction_amount = float(order.get('payments', [{}])[0].get('transaction_amount', 0)) if order.get('payments') else 0
                 
                 # Calcular cantidad total de items en la orden
                 items_total = sum(
@@ -142,7 +137,7 @@ class Analytics:
                 sales_data.append({
                     'date': date,
                     'sales': items_total,  # Cantidad de items vendidos
-                    'revenue': order_total  # Ingreso real de la venta
+                    'revenue': transaction_amount  # Ingreso real de la venta
                 })
             
             df = pd.DataFrame(sales_data)
