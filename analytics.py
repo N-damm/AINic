@@ -58,14 +58,22 @@ class Analytics:
                 }
             
             total_sales = len(sales)
+            
+            # Calcular ingresos totales usando el precio de la orden
             total_revenue = sum(
-                float(order.get('total_amount', 0))
+                sum(
+                    float(item.get('unit_price', 0)) * float(item.get('quantity', 1))
+                    for item in order.get('order_items', [])
+                )
                 for order in sales
             )
             
             # Calcular total de items
             total_items = sum(
-                len(order.get('order_items', []))
+                sum(
+                    int(item.get('quantity', 1))
+                    for item in order.get('order_items', [])
+                )
                 for order in sales
             )
             
@@ -73,10 +81,10 @@ class Analytics:
             avg_price = total_revenue / total_items if total_items > 0 else 0
             
             return {
-                'total_sales': total_sales,
-                'total_revenue': total_revenue,
-                'avg_price': avg_price,
-                'total_items': total_items
+                'total_sales': total_sales,  # Número de órdenes
+                'total_revenue': total_revenue,  # Ingreso total
+                'avg_price': avg_price,  # Precio promedio por item
+                'total_items': total_items  # Cantidad total de items
             }
             
         except Exception as e:
@@ -119,10 +127,22 @@ class Analytics:
                     order['date_created'].replace('Z', '+00:00')
                 ).replace(tzinfo=None)
                 
+                # Calcular el total real de la orden
+                order_total = sum(
+                    float(item.get('unit_price', 0)) * float(item.get('quantity', 1))
+                    for item in order.get('order_items', [])
+                )
+                
+                # Calcular cantidad total de items en la orden
+                items_total = sum(
+                    int(item.get('quantity', 1))
+                    for item in order.get('order_items', [])
+                )
+                
                 sales_data.append({
                     'date': date,
-                    'sales': len(order.get('order_items', [])),
-                    'revenue': float(order.get('total_amount', 0))
+                    'sales': items_total,  # Cantidad de items vendidos
+                    'revenue': order_total  # Ingreso real de la venta
                 })
             
             df = pd.DataFrame(sales_data)
@@ -183,6 +203,15 @@ class Analytics:
                     side='right'
                 ),
                 hovermode='x unified'
+            )
+            
+            # Formatear los valores en el hover
+            fig.update_traces(
+                hovertemplate="<br>".join([
+                    "%{x}",
+                    "Unidades: %{y:,.0f}",
+                    "Ingresos: $%{y:,.2f}"
+                ])
             )
             
             return fig
