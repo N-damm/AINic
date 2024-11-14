@@ -1,6 +1,7 @@
 import pandas as pd
 import plotly.express as px
 from datetime import datetime, timedelta
+import plotly.graph_objects as go
 
 class Analytics:
     def __init__(self, ml_api, database):
@@ -85,7 +86,22 @@ class Analytics:
             df = pd.DataFrame(sales)
             
             if df.empty:
-                return None
+                # Crear un gráfico vacío con mensaje
+                fig = go.Figure()
+                fig.add_annotation(
+                    text="No hay datos de ventas disponibles",
+                    xref="paper",
+                    yref="paper",
+                    x=0.5,
+                    y=0.5,
+                    showarrow=False
+                )
+                fig.update_layout(
+                    title='Ventas Diarias',
+                    xaxis_title='Fecha',
+                    yaxis_title='Ventas'
+                )
+                return fig
                 
             df['date'] = pd.to_datetime(df['date_created']).dt.date
             daily_sales = df.groupby('date').size().reset_index(name='sales')
@@ -97,44 +113,19 @@ class Analytics:
             return fig
         except Exception as e:
             print(f"Error generando gráfico de ventas: {str(e)}")
-            return None
-    
-    def plot_price_distribution(self, products):
-        """Genera gráfico de distribución de precios"""
-        try:
-            df = pd.DataFrame(products)
-            
-            if df.empty:
-                return None
-                
-            fig = px.histogram(df, x='price',
-                             title='Distribución de Precios',
-                             labels={'price': 'Precio', 'count': 'Cantidad de Productos'})
-            
+            # Crear un gráfico de error
+            fig = go.Figure()
+            fig.add_annotation(
+                text="Error al generar el gráfico de ventas",
+                xref="paper",
+                yref="paper",
+                x=0.5,
+                y=0.5,
+                showarrow=False
+            )
+            fig.update_layout(
+                title='Ventas Diarias',
+                xaxis_title='Fecha',
+                yaxis_title='Ventas'
+            )
             return fig
-        except Exception as e:
-            print(f"Error generando gráfico de precios: {str(e)}")
-            return None
-    
-    def plot_stock_distribution(self, products):
-        """Genera gráfico de distribución de stock"""
-        try:
-            df = pd.DataFrame(products)
-            
-            if df.empty:
-                return None
-                
-            stock_status = pd.cut(df['available_quantity'],
-                                bins=[-1, 0, 5, 10, 20, float('inf')],
-                                labels=['Sin stock', '1-5', '6-10', '11-20', 'Más de 20'])
-            
-            stock_counts = stock_status.value_counts()
-            
-            fig = px.pie(values=stock_counts.values,
-                        names=stock_counts.index,
-                        title='Distribución de Stock')
-            
-            return fig
-        except Exception as e:
-            print(f"Error generando gráfico de stock: {str(e)}")
-            return None

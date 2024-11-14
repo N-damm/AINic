@@ -208,38 +208,43 @@ def show_metrics_page():
     
     # Cargar métricas
     with st.spinner("Calculando métricas..."):
-        sales_metrics = st.session_state.analytics.get_sales_metrics(days)
-        questions_metrics = st.session_state.analytics.get_questions_metrics()
-    
-    # Mostrar métricas principales
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric(
-            "Ventas Totales",
-            sales_metrics['total_sales']
-        )
-    with col2:
-        st.metric(
-            "Ingresos",
-            f"${sales_metrics['total_revenue']:,.2f}"
-        )
-    with col3:
-        st.metric(
-            "Preguntas Pendientes",
-            questions_metrics['pending']
-        )
-    with col4:
-        st.metric(
-            "Tiempo Resp. Promedio",
-            f"{questions_metrics['avg_response_time']:.1f}h"
-        )
-    
-    # Gráficos
-    st.plotly_chart(
-        st.session_state.analytics.plot_sales_trend(days),
-        use_container_width=True
-    )
+        try:
+            sales_metrics = st.session_state.analytics.get_sales_metrics(days)
+            questions_metrics = st.session_state.analytics.get_questions_metrics()
+        
+            # Mostrar métricas principales
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric(
+                    "Ventas Totales",
+                    sales_metrics['total_sales']
+                )
+            with col2:
+                st.metric(
+                    "Ingresos",
+                    f"${sales_metrics['total_revenue']:,.2f}"
+                )
+            with col3:
+                st.metric(
+                    "Preguntas Pendientes",
+                    questions_metrics['pending']
+                )
+            with col4:
+                st.metric(
+                    "Tiempo Resp. Promedio",
+                    f"{questions_metrics['avg_response_time']:.1f}h"
+                )
+            
+            # Gráfico de ventas
+            sales_chart = st.session_state.analytics.plot_sales_trend(days)
+            if sales_chart is not None:
+                st.plotly_chart(sales_chart, use_container_width=True)
+            else:
+                st.warning("No se pudo generar el gráfico de ventas")
+                
+        except Exception as e:
+            st.error(f"Error al cargar las métricas: {str(e)}")
 
 def main():
     st.set_page_config(
