@@ -204,7 +204,13 @@ def show_metrics_page():
     st.title("Métricas")
     
     # Selector de período
-    days = st.slider("Período de análisis (días)", 1, 90, 30)
+    days = st.slider(
+        "Período de análisis (días)", 
+        min_value=1,
+        max_value=90, 
+        value=30,
+        help="Selecciona el número de días para analizar"
+    )
     
     # Cargar métricas
     with st.spinner("Calculando métricas..."):
@@ -242,6 +248,90 @@ def show_metrics_page():
                 st.plotly_chart(sales_chart, use_container_width=True)
             else:
                 st.warning("No se pudo generar el gráfico de ventas")
+                
+            # Detalle de ventas
+            st.markdown("### Detalle de Ventas")
+            
+            # Obtener ventas ordenadas por fecha
+            sales = st.session_state.ml_api.get_sales(days)
+            
+            if not sales:
+                st.info("No hay ventas en el período seleccionado")
+            else:
+                for order in sales:  # Ya vienen ordenadas de más nueva a más vieja
+                    # Crear un expander para cada orden
+                    date_created = datetime.fromisoformat(
+                        order['date_created'].replace('Z', '+00:00')
+                    ).strftime('%d/%m/%Y %H:%M')
+                    
+                    # Calcular total de la orden
+                    order_total = sum(
+                        float(item.get('unit_price', 0)) * float(item.get('quantity', 1))
+                        for item in order.get('order_items', [])
+                    )
+                    
+                    expander_title = f"Orden #{order['id']} - {date_created} - Total: ${order_total:,.2f}"
+                    with st.expander(expander_title):
+                        # Información del comprador
+                        buyer = order.get('buyer', {})
+                        st.markdown(f"**Comprador:** {buyer.get('nickname', 'N/A')}")
+                        
+                        # Tabla de productos
+                        products_data = []
+                        for item in order.get('order_items', []):
+                            products_data.append({
+                                'Producto': item.get('item', {}).get('title', 'N/A'),
+                                'Cantidad': item.get('quantity', 0),
+                                'Precio Unit.': f"${float(item.get('unit_price', 0)):,.2f}",
+                                'Subtotal': f"${float(item.get('unit_price', 0)) * float(item.get('quantity', 1)):,.2f}"
+                            })
+                        
+                        df = pd.DataFrame(products_data)
+                        st.dataframe(
+                            df,
+                            hide_index=True,
+                            use_container_width=True
+                        )
+                        
+                        # Estado del envío
+                        shipping = order.get('shipping', {})
+                        if shipping:
+                            st.markdown(f"**Envío ID:** {shipping.get('id', 'N/A')}")
+                        
+                        # Estado de la orden
+                        st.markdown(f"**Estado:** {order.get('status', 'N/A')}")
+                        
+                        # Tags de la orden
+                        tags = order.get('tags', [])
+                        if tags:
+                            st.markdown(f"**Tags:** {', '.join(tags)}")
+                
+                # Botón para exportar a Excel
+                orders_data = []
+                for order in sales:
+                    for item in order.get('order_items', []):
+                        orders_data.append({
+                            'Fecha': datetime.fromisoformat(order['date_created'].replace('Z', '+00:00')).strftime('%d/%m/%Y %H:%M'),
+                            'Orden ID': order['id'],
+                            'Comprador': order.get('buyer', {}).get('nickname', 'N/A'),
+                            'Producto': item.get('item', {}).get('title', 'N/A'),
+                            'Cantidad': item.get('quantity', 0),
+                            'Precio Unitario': float(item.get('unit_price', 0)),
+                            'Subtotal': float(item.get('unit_price', 0)) * float(item.get('quantity', 1)),
+                            'Estado': order.get('status', 'N/A'),
+                            'Tags': ', '.join(order.get('tags', []))
+                        })
+                
+                df_export = pd.DataFrame(orders_data)
+                
+                if st.download_button(
+                    "📥 Descargar Detalle de Ventas",
+                    df_export.to_csv(index=False).encode('utf-8'),
+                    "ventas_detalle.csv",
+                    "text/csv",
+                    key='download-sales'
+                ):
+                    st.success('¡Archivo descargado!')
                 
         except Exception as e:
             st.error(f"Error al cargar las métricas: {str(e)}")
