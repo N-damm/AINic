@@ -128,7 +128,7 @@ class MLApi:
             print(f"Error obteniendo preguntas: {str(e)}")
             return []
         
-    def get_sales(self, days=1):
+    def get_sales(self, days=30):
         """
         Obtiene las ventas de los últimos X días
         
@@ -139,14 +139,19 @@ class MLApi:
             list: Lista de órdenes de venta
         """
         try:
-            # Si es 1 día, tomar desde 00:00 hasta 23:59:59 del día actual
+            # Trabajar con la zona horaria local (UTC-3)
+            local_tz = datetime.now().astimezone().tzinfo
+            now = datetime.now(local_tz)
+            
+            # Si es 1 día, tomar desde 00:00 hasta 23:59:59 del día actual en hora local
             if days == 1:
-                from_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-                to_date = datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999)
+                # Convertir a UTC-4 para la API
+                from_date = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=1)
+                to_date = now.replace(hour=23, minute=59, second=59, microsecond=999999) - timedelta(hours=1)
             else:
                 # Para más días, tomar desde las 00:00 del día inicial
-                from_date = (datetime.now() - timedelta(days=days-1)).replace(hour=0, minute=0, second=0, microsecond=0)
-                to_date = datetime.now()
+                from_date = (now - timedelta(days=days-1)).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=1)
+                to_date = now - timedelta(hours=1)
 
             # URL para obtener órdenes
             url = "https://api.mercadolibre.com/orders/search"
@@ -154,8 +159,8 @@ class MLApi:
             params = {
                 'seller': self.seller_id,
                 'order.status': 'paid',  # Solo órdenes pagadas
-                'order.date_created.from': from_date.strftime("%Y-%m-%dT%H:%M:%S.000-00:00"),
-                'order.date_created.to': to_date.strftime("%Y-%m-%dT%H:%M:%S.000-00:00"),
+                'order.date_created.from': from_date.strftime("%Y-%m-%dT%H:%M:%S.000-04:00"),
+                'order.date_created.to': to_date.strftime("%Y-%m-%dT%H:%M:%S.000-04:00"),
                 'sort': 'date_desc'
             }
             

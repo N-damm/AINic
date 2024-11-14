@@ -259,9 +259,10 @@ def show_metrics_page():
                 st.info("No hay ventas en el período seleccionado")
             else:
                 for order in sales:  # Ya vienen ordenadas de más nueva a más vieja
-                    # Crear un expander para cada orden
-                    date_created = datetime.fromisoformat(
-                        order['date_created'].replace('Z', '+00:00')
+                    # Convertir fecha a zona horaria local (UTC-3)
+                    date_created = (
+                        datetime.fromisoformat(order['date_created'].replace('Z', '+00:00'))
+                        + timedelta(hours=1)  # Ajustar de UTC-4 a UTC-3
                     ).strftime('%d/%m/%Y %H:%M')
                     
                     # Calcular total de la orden
@@ -298,35 +299,19 @@ def show_metrics_page():
                         if shipping:
                             st.markdown(f"**Envío ID:** {shipping.get('id', 'N/A')}")
                         
-                        # Estado de la orden
-                        st.markdown(f"**Estado:** {order.get('status', 'N/A')}")
-                        
-                        # Tags de la orden
-                        tags = order.get('tags', [])
-                        if tags:
-                            st.markdown(f"**Tags:** {', '.join(tags)}")
+                        # Estado de la orden y tags
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.markdown(f"**Estado:** {order.get('status', 'N/A')}")
+                        with col2:
+                            tags = order.get('tags', [])
+                            if tags:
+                                st.markdown(f"**Tags:** {', '.join(tags)}")
                 
                 # Botón para exportar a Excel
-                orders_data = []
-                for order in sales:
-                    for item in order.get('order_items', []):
-                        orders_data.append({
-                            'Fecha': datetime.fromisoformat(order['date_created'].replace('Z', '+00:00')).strftime('%d/%m/%Y %H:%M'),
-                            'Orden ID': order['id'],
-                            'Comprador': order.get('buyer', {}).get('nickname', 'N/A'),
-                            'Producto': item.get('item', {}).get('title', 'N/A'),
-                            'Cantidad': item.get('quantity', 0),
-                            'Precio Unitario': float(item.get('unit_price', 0)),
-                            'Subtotal': float(item.get('unit_price', 0)) * float(item.get('quantity', 1)),
-                            'Estado': order.get('status', 'N/A'),
-                            'Tags': ', '.join(order.get('tags', []))
-                        })
-                
-                df_export = pd.DataFrame(orders_data)
-                
                 if st.download_button(
                     "📥 Descargar Detalle de Ventas",
-                    df_export.to_csv(index=False).encode('utf-8'),
+                    create_sales_excel(sales),
                     "ventas_detalle.csv",
                     "text/csv",
                     key='download-sales'
@@ -335,6 +320,31 @@ def show_metrics_page():
                 
         except Exception as e:
             st.error(f"Error al cargar las métricas: {str(e)}")
+
+def create_sales_excel(sales):
+    """Crea el archivo Excel con el detalle de ventas"""
+    orders_data = []
+    for order in sales:
+        date_created = (
+            datetime.fromisoformat(order['date_created'].replace('Z', '+00:00'))
+            + timedelta(hours=1)  # Ajustar de UTC-4 a UTC-3
+        ).strftime('%d/%m/%Y %H:%M')
+        
+        for item in order.get('order_items', []):
+            orders_data.append({
+                'Fecha': date_created,
+                'Orden ID': order['id'],
+                'Comprador': order.get('buyer', {}).get('nickname', 'N/A'),
+                'Producto': item.get('item', {}).get('title', 'N/A'),
+                'Cantidad': item.get('quantity', 0),
+                'Precio Unitario': float(item.get('unit_price', 0)),
+                'Subtotal': float(item.get('unit_price', 0)) * float(item.get('quantity', 1)),
+                'Estado': order.get('status', 'N/A'),
+                'Tags': ', '.join(order.get('tags', []))
+            })
+    
+    df_export = pd.DataFrame(orders_data)
+    return df_export.to_csv(index=False).encode('utf-8')
 
 def main():
     st.set_page_config(
