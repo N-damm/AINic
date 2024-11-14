@@ -204,7 +204,7 @@ def show_metrics_page():
     st.title("Métricas")
     
     # Selector de período
-    days = st.slider("Período de análisis (días)", 7, 90, 30)
+    days = st.slider("Período de análisis (días)", 1, 90, 30)
     
     # Cargar métricas
     with st.spinner("Calculando métricas..."):
