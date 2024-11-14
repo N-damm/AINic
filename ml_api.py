@@ -139,15 +139,22 @@ class MLApi:
             list: Lista de órdenes de venta
         """
         try:
-            # Calcular fecha desde
-            from_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
-            
+            # Si es 1 día, tomar desde 00:00 hasta 23:59:59 del día actual
+            if days == 1:
+                from_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                to_date = datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999)
+            else:
+                # Para más días, tomar desde las 00:00 del día inicial
+                from_date = (datetime.now() - timedelta(days=days-1)).replace(hour=0, minute=0, second=0, microsecond=0)
+                to_date = datetime.now()
+
             # URL para obtener órdenes
             url = "https://api.mercadolibre.com/orders/search"
             
             params = {
                 'seller': self.seller_id,
-                'order.date_created.from': f"{from_date}T00:00:00.000-00:00",
+                'order.date_created.from': from_date.strftime("%Y-%m-%dT%H:%M:%S.000-00:00"),
+                'order.date_created.to': to_date.strftime("%Y-%m-%dT%H:%M:%S.000-00:00"),
                 'sort': 'date_desc'
             }
             

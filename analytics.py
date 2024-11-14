@@ -114,9 +114,10 @@ class Analytics:
             # Crear DataFrame con las ventas
             sales_data = []
             for order in sales:
+                # Convertir a datetime local
                 date = datetime.fromisoformat(
                     order['date_created'].replace('Z', '+00:00')
-                ).date()
+                ).replace(tzinfo=None)
                 
                 sales_data.append({
                     'date': date,
@@ -126,11 +127,26 @@ class Analytics:
             
             df = pd.DataFrame(sales_data)
             
-            # Agrupar por fecha
-            daily_metrics = df.groupby('date').agg({
-                'sales': 'sum',
-                'revenue': 'sum'
-            }).reset_index()
+            if days == 1:
+                # Para un día, agrupar por hora
+                df['date_hour'] = df['date'].dt.strftime('%H:00')
+                daily_metrics = df.groupby('date_hour').agg({
+                    'sales': 'sum',
+                    'revenue': 'sum'
+                }).reset_index()
+                x_axis = 'date_hour'
+                title = 'Ventas por Hora (Hoy)'
+                xaxis_title = 'Hora'
+            else:
+                # Para más días, agrupar por fecha
+                df['date_day'] = df['date'].dt.date
+                daily_metrics = df.groupby('date_day').agg({
+                    'sales': 'sum',
+                    'revenue': 'sum'
+                }).reset_index()
+                x_axis = 'date_day'
+                title = f'Ventas Diarias (Últimos {days} días)'
+                xaxis_title = 'Fecha'
             
             # Crear gráfico con dos ejes Y
             fig = go.Figure()
@@ -138,7 +154,7 @@ class Analytics:
             # Agregar línea de ventas
             fig.add_trace(
                 go.Scatter(
-                    x=daily_metrics['date'],
+                    x=daily_metrics[x_axis],
                     y=daily_metrics['sales'],
                     name='Unidades vendidas',
                     line=dict(color='blue')
@@ -148,7 +164,7 @@ class Analytics:
             # Agregar línea de ingresos en el eje Y secundario
             fig.add_trace(
                 go.Scatter(
-                    x=daily_metrics['date'],
+                    x=daily_metrics[x_axis],
                     y=daily_metrics['revenue'],
                     name='Ingresos ($)',
                     yaxis='y2',
@@ -158,8 +174,8 @@ class Analytics:
             
             # Configurar layout
             fig.update_layout(
-                title='Ventas Diarias',
-                xaxis_title='Fecha',
+                title=title,
+                xaxis_title=xaxis_title,
                 yaxis_title='Unidades vendidas',
                 yaxis2=dict(
                     title='Ingresos ($)',
