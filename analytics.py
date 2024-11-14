@@ -60,20 +60,17 @@ class Analytics:
             total_sales = len(sales)
             
             # Calcular ingresos totales usando el precio real de la transacción
-            total_revenue = sum(
-                float(order.get('payments', [{}])[0].get('transaction_amount', 0))
-                for order in sales
-                if order.get('payments')
-            )
+            total_revenue = 0
+            total_items = 0
             
-            # Calcular total de items
-            total_items = sum(
-                sum(
-                    int(item.get('quantity', 1))
-                    for item in order.get('order_items', [])
-                )
-                for order in sales
-            )
+            for order in sales:
+                # Obtener items y cantidades
+                for item in order.get('order_items', []):
+                    quantity = int(item.get('quantity', 0))
+                    # Usar unit_price que es el precio real al que se vendió
+                    price = float(item.get('unit_price', 0))
+                    total_items += quantity
+                    total_revenue += price * quantity
             
             # Calcular precio promedio
             avg_price = total_revenue / total_items if total_items > 0 else 0
@@ -125,19 +122,20 @@ class Analytics:
                     order['date_created'].replace('Z', '+00:00')
                 ).replace(tzinfo=None)
                 
-                # Obtener el monto real pagado de la transacción
-                transaction_amount = float(order.get('payments', [{}])[0].get('transaction_amount', 0)) if order.get('payments') else 0
+                # Calcular total de items y revenue por orden
+                order_items = 0
+                order_revenue = 0
                 
-                # Calcular cantidad total de items en la orden
-                items_total = sum(
-                    int(item.get('quantity', 1))
-                    for item in order.get('order_items', [])
-                )
+                for item in order.get('order_items', []):
+                    quantity = int(item.get('quantity', 0))
+                    price = float(item.get('unit_price', 0))
+                    order_items += quantity
+                    order_revenue += price * quantity
                 
                 sales_data.append({
                     'date': date,
-                    'sales': items_total,  # Cantidad de items vendidos
-                    'revenue': transaction_amount  # Ingreso real de la venta
+                    'sales': order_items,  # Cantidad de items vendidos
+                    'revenue': order_revenue  # Ingreso real de la venta
                 })
             
             df = pd.DataFrame(sales_data)

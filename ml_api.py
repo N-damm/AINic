@@ -128,7 +128,7 @@ class MLApi:
             print(f"Error obteniendo preguntas: {str(e)}")
             return []
         
-    def get_sales(self, days=30):
+    def get_sales(self, days=1):
         """
         Obtiene las ventas de los últimos X días
         
@@ -153,6 +153,7 @@ class MLApi:
             
             params = {
                 'seller': self.seller_id,
+                'order.status': 'paid',  # Solo órdenes pagadas
                 'order.date_created.from': from_date.strftime("%Y-%m-%dT%H:%M:%S.000-00:00"),
                 'order.date_created.to': to_date.strftime("%Y-%m-%dT%H:%M:%S.000-00:00"),
                 'sort': 'date_desc'
@@ -182,13 +183,7 @@ class MLApi:
                 if not results:
                     break
                     
-                # Filtrar solo órdenes completas/pagadas
-                valid_orders = [
-                    order for order in results 
-                    if order.get('status') in ['paid', 'delivered']
-                ]
-                
-                all_orders.extend(valid_orders)
+                all_orders.extend(results)
                 
                 # Si recibimos menos resultados que el límite, llegamos al final
                 if len(results) < limit:
