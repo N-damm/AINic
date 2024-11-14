@@ -35,24 +35,37 @@ class MLApi:
         try:
             # Primero obtenemos los IDs de todos los productos
             items_url = f"https://api.mercadolibre.com/users/{self.seller_id}/items/search"
-            items_response = requests.get(items_url, headers=self._get_headers())
-            
-            if items_response.status_code != 200:
-                print(f"Error obteniendo lista de items: {items_response.text}")
-                return []
-
-            items_data = items_response.json()
-            item_ids = items_data.get('results', [])
-
-            # Luego obtenemos la información detallada de cada producto
+            offset = 0
+            limit = 50
             products = []
-            for item_id in item_ids:
-                product = self.get_item_info(item_id)
-                if product:
-                    products.append(product)
-
+    
+            while True:
+                params = {
+                    'offset': offset,
+                    'limit': limit
+                }
+                items_response = requests.get(items_url, headers=self._get_headers(), params=params)
+                
+                if items_response.status_code != 200:
+                    print(f"Error obteniendo lista de items: {items_response.text}")
+                    break
+    
+                items_data = items_response.json()
+                item_ids = items_data.get('results', [])
+    
+                if not item_ids:
+                    break
+    
+                # Luego obtenemos la información detallada de cada producto
+                for item_id in item_ids:
+                    product = self.get_item_info(item_id)
+                    if product:
+                        products.append(product)
+    
+                offset += limit
+    
             return products
-
+    
         except Exception as e:
             print(f"Error obteniendo productos: {str(e)}")
             return []
