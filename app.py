@@ -45,15 +45,6 @@ def show_products_page():
         'permalink'  # URL de la publicación
     ]].copy()
     
-    # Métricas principales
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Total Productos", len(df))
-    with col2:
-        st.metric("Con Stock", len(df[df['available_quantity'] > 0]))
-    with col3:
-        st.metric("Sin Stock", len(df[df['available_quantity'] == 0]))
-
     # Filtros
     col1, col2 = st.columns(2)
     with col1:
@@ -90,6 +81,15 @@ def show_products_page():
     if search:
         filtered_df = filtered_df[filtered_df['title'].str.contains(search, case=False, na=False)]
     
+    # Métricas principales
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Productos", len(filtered_df))
+    with col2:
+        st.metric("Con Stock", len(filtered_df[filtered_df['available_quantity'] > 0]))
+    with col3:
+        st.metric("Sin Stock", len(filtered_df[filtered_df['available_quantity'] == 0]))
+        
     # Crear columna de link
     filtered_df['Ver publicación'] = filtered_df['permalink'].apply(
         lambda x: f'<a href="{x}" target="_blank">Ver</a>'
