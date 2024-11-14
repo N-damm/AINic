@@ -127,3 +127,70 @@ class MLApi:
         except Exception as e:
             print(f"Error obteniendo preguntas: {str(e)}")
             return []
+        
+    def get_sales(self, days=30):
+        """
+        Obtiene las ventas de los últimos X días
+        
+        Args:
+            days (int): Número de días hacia atrás para obtener ventas
+            
+        Returns:
+            list: Lista de órdenes de venta
+        """
+        try:
+            # Calcular fecha desde
+            from_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+            
+            # URL para obtener órdenes
+            url = "https://api.mercadolibre.com/orders/search"
+            
+            params = {
+                'seller': self.seller_id,
+                'order.date_created.from': f"{from_date}T00:00:00.000-00:00",
+                'sort': 'date_desc'
+            }
+            
+            all_orders = []
+            offset = 0
+            limit = 50
+            
+            while True:
+                params['offset'] = offset
+                params['limit'] = limit
+                
+                response = requests.get(
+                    url, 
+                    headers=self._get_headers(),
+                    params=params
+                )
+                
+                if response.status_code != 200:
+                    print(f"Error obteniendo órdenes: {response.text}")
+                    break
+                    
+                data = response.json()
+                results = data.get('results', [])
+                
+                if not results:
+                    break
+                    
+                # Filtrar solo órdenes completas/pagadas
+                valid_orders = [
+                    order for order in results 
+                    if order.get('status') in ['paid', 'delivered']
+                ]
+                
+                all_orders.extend(valid_orders)
+                
+                # Si recibimos menos resultados que el límite, llegamos al final
+                if len(results) < limit:
+                    break
+                    
+                offset += limit
+                
+            return all_orders
+            
+        except Exception as e:
+            print(f"Error obteniendo ventas: {str(e)}")
+            return []

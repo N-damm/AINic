@@ -7,42 +7,7 @@ class Analytics:
     def __init__(self, ml_api, database):
         self.ml = ml_api
         self.db = database
-        
-    def get_sales_metrics(self, days=30):
-        """Obtiene métricas básicas de ventas"""
-        try:
-            sales = self.ml.get_sales(days)
-            df = pd.DataFrame(sales)
             
-            if df.empty:
-                return {
-                    'total_sales': 0,
-                    'total_revenue': 0,
-                    'avg_price': 0,
-                    'total_items': 0
-                }
-            
-            # Calcular métricas
-            total_sales = len(df)
-            total_revenue = df['total_amount'].sum() if 'total_amount' in df.columns else 0
-            avg_price = total_revenue / total_sales if total_sales > 0 else 0
-            total_items = df['order_items'].apply(len).sum() if 'order_items' in df.columns else 0
-            
-            return {
-                'total_sales': total_sales,
-                'total_revenue': total_revenue,
-                'avg_price': avg_price,
-                'total_items': total_items
-            }
-        except Exception as e:
-            print(f"Error calculando métricas de ventas: {str(e)}")
-            return {
-                'total_sales': 0,
-                'total_revenue': 0,
-                'avg_price': 0,
-                'total_items': 0
-            }
-    
     def get_questions_metrics(self):
         """Obtiene métricas de preguntas"""
         try:
@@ -78,14 +43,57 @@ class Analytics:
                 'pending': 0,
                 'avg_response_time': 0
             }
-    
+        
+    def get_sales_metrics(self, days=30):
+        """Obtiene métricas básicas de ventas"""
+        try:
+            sales = self.ml.get_sales(days)
+            
+            if not sales:
+                return {
+                    'total_sales': 0,
+                    'total_revenue': 0,
+                    'avg_price': 0,
+                    'total_items': 0
+                }
+            
+            total_sales = len(sales)
+            total_revenue = sum(
+                float(order.get('total_amount', 0))
+                for order in sales
+            )
+            
+            # Calcular total de items
+            total_items = sum(
+                len(order.get('order_items', []))
+                for order in sales
+            )
+            
+            # Calcular precio promedio
+            avg_price = total_revenue / total_items if total_items > 0 else 0
+            
+            return {
+                'total_sales': total_sales,
+                'total_revenue': total_revenue,
+                'avg_price': avg_price,
+                'total_items': total_items
+            }
+            
+        except Exception as e:
+            print(f"Error calculando métricas de ventas: {str(e)}")
+            return {
+                'total_sales': 0,
+                'total_revenue': 0,
+                'avg_price': 0,
+                'total_items': 0
+            }
+
     def plot_sales_trend(self, days=30):
         """Genera gráfico de tendencia de ventas"""
         try:
             sales = self.ml.get_sales(days)
-            df = pd.DataFrame(sales)
             
-            if df.empty:
+            if not sales:
                 # Crear un gráfico vacío con mensaje
                 fig = go.Figure()
                 fig.add_annotation(
@@ -102,21 +110,73 @@ class Analytics:
                     yaxis_title='Ventas'
                 )
                 return fig
-                
-            df['date'] = pd.to_datetime(df['date_created']).dt.date
-            daily_sales = df.groupby('date').size().reset_index(name='sales')
             
-            fig = px.line(daily_sales, x='date', y='sales',
-                         title='Ventas Diarias',
-                         labels={'sales': 'Ventas', 'date': 'Fecha'})
+            # Crear DataFrame con las ventas
+            sales_data = []
+            for order in sales:
+                date = datetime.fromisoformat(
+                    order['date_created'].replace('Z', '+00:00')
+                ).date()
+                
+                sales_data.append({
+                    'date': date,
+                    'sales': len(order.get('order_items', [])),
+                    'revenue': float(order.get('total_amount', 0))
+                })
+            
+            df = pd.DataFrame(sales_data)
+            
+            # Agrupar por fecha
+            daily_metrics = df.groupby('date').agg({
+                'sales': 'sum',
+                'revenue': 'sum'
+            }).reset_index()
+            
+            # Crear gráfico con dos ejes Y
+            fig = go.Figure()
+            
+            # Agregar línea de ventas
+            fig.add_trace(
+                go.Scatter(
+                    x=daily_metrics['date'],
+                    y=daily_metrics['sales'],
+                    name='Unidades vendidas',
+                    line=dict(color='blue')
+                )
+            )
+            
+            # Agregar línea de ingresos en el eje Y secundario
+            fig.add_trace(
+                go.Scatter(
+                    x=daily_metrics['date'],
+                    y=daily_metrics['revenue'],
+                    name='Ingresos ($)',
+                    yaxis='y2',
+                    line=dict(color='green')
+                )
+            )
+            
+            # Configurar layout
+            fig.update_layout(
+                title='Ventas Diarias',
+                xaxis_title='Fecha',
+                yaxis_title='Unidades vendidas',
+                yaxis2=dict(
+                    title='Ingresos ($)',
+                    overlaying='y',
+                    side='right'
+                ),
+                hovermode='x unified'
+            )
             
             return fig
+            
         except Exception as e:
             print(f"Error generando gráfico de ventas: {str(e)}")
             # Crear un gráfico de error
             fig = go.Figure()
             fig.add_annotation(
-                text="Error al generar el gráfico de ventas",
+                text=f"Error al generar el gráfico de ventas: {str(e)}",
                 xref="paper",
                 yref="paper",
                 x=0.5,
