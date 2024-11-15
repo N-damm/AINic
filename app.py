@@ -192,7 +192,7 @@ def show_questions_page():
                 st.write(f"📅 Pregunta: {date_created.strftime('%d/%m/%Y %H:%M')}")
             with col2:
                 if q.get('answer'):
-                    answer_date = datetime.fromisoformat(q['answer']['date_created'][:-6]) + timedelta(hours=1
+                    answer_date = datetime.fromisoformat(q['answer']['date_created'][:-6]) + timedelta(hours=1)
                     st.write(f"📅 Respuesta: {answer_date.strftime('%d/%m/%Y %H:%M')}")
             with col3:
                 st.write(f"🏷️ MLA: {q.get('item', {}).get('id', 'N/A')}")
