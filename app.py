@@ -251,6 +251,16 @@ def show_metrics_page():
             # Productos más vendidos
             st.markdown("### Productos más vendidos")
             
+            # Crear un contenedor con margen inferior para las opciones de ordenamiento
+            with st.container():
+                st.write("Ordenar por:")
+                sort_by = st.radio(
+                    label="Ordenar por",
+                    options=["Cantidad vendida", "Monto vendido"],
+                    label_visibility="collapsed"
+                )
+                st.markdown("---")
+            
             # Obtener ventas del período seleccionado
             sales = st.session_state.ml_api.get_sales(days)
             
@@ -287,9 +297,6 @@ def show_metrics_page():
                 # Convertir a DataFrame
                 df_product_sales = pd.DataFrame(product_sales.values())
                 
-                # Opciones de ordenamiento
-                sort_by = st.radio("Ordenar por:", ("Cantidad vendida", "Monto vendido"))
-                
                 if sort_by == "Cantidad vendida":
                     df_product_sales.sort_values(by='quantity', ascending=False, inplace=True)
                 else:
@@ -297,11 +304,12 @@ def show_metrics_page():
                 
                 # Mostrar tabla de productos más vendidos
                 for _, row in df_product_sales.iterrows():
-                    st.markdown(f"**{row['title']}**")
-                    st.markdown(f"SKU: {row['seller_sku']}")
-                    st.markdown(f"Cantidad vendida: {row['quantity']}")
-                    st.markdown(f"Monto vendido: ${row['total_amount']:.2f}")
-                    st.markdown("---")
+                    with st.container():
+                        st.markdown(f"**{row['title']}**")
+                        st.markdown(f"SKU: {row['seller_sku']}")
+                        st.markdown(f"Cantidad vendida: {row['quantity']}")
+                        st.markdown(f"Monto vendido: ${row['total_amount']:.2f}")
+                        st.markdown("---")
                         
             # Detalle de ventas
             st.markdown("### Detalle de Ventas")
