@@ -265,6 +265,7 @@ def show_metrics_page():
                         if product_id not in product_sales:
                             product_sales[product_id] = {
                                 'title': item['item']['title'],
+                                'sku': item['item']['id'],  # Agregamos el SKU (MLA ID)
                                 'quantity': 0,
                                 'total_amount': 0
                             }
@@ -285,6 +286,7 @@ def show_metrics_page():
                 # Mostrar tabla de productos más vendidos
                 for _, row in df_product_sales.iterrows():
                     st.markdown(f"**{row['title']}**")
+                    st.markdown(f"SKU: {row['sku']}")  # Mostramos el SKU
                     st.markdown(f"Cantidad vendida: {row['quantity']}")
                     st.markdown(f"Monto vendido: ${row['total_amount']:.2f}")
                     st.markdown("---")
