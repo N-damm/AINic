@@ -139,11 +139,10 @@ def show_questions_page():
     # Selector de estado
     status = st.selectbox(
         "Filtrar preguntas por estado:",
-        ["Todas", "Sin Responder", "Respondidas"]
+        ["Sin Responder", "Respondidas"]
     )
     
     status_map = {
-        "Todas": "all",
         "Sin Responder": "UNANSWERED",
         "Respondidas": "ANSWERED"
     }
