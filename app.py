@@ -248,11 +248,54 @@ def show_metrics_page():
             else:
                 st.warning("No se pudo generar el gráfico de ventas")
                 
+            # Productos más vendidos
+            st.markdown("### Productos más vendidos")
+            
+            # Obtener ventas del período seleccionado
+            sales = st.session_state.ml_api.get_sales(days)
+            
+            if not sales:
+                st.info("No hay ventas en el período seleccionado")
+            else:
+                # Agrupar ventas por producto
+                product_sales = {}
+                for order in sales:
+                    for item in order.get('order_items', []):
+                        product_id = item['item']['id']
+                        if product_id not in product_sales:
+                            product_sales[product_id] = {
+                                'title': item['item']['title'],
+                                'thumbnail': item['item']['thumbnail'],
+                                'quantity': 0,
+                                'total_amount': 0
+                            }
+                        product_sales[product_id]['quantity'] += item['quantity']
+                        product_sales[product_id]['total_amount'] += item['quantity'] * float(item['unit_price'])
+                
+                # Convertir a DataFrame
+                df_product_sales = pd.DataFrame(product_sales.values())
+                
+                # Opciones de ordenamiento
+                sort_by = st.radio("Ordenar por:", ("Cantidad vendida", "Monto vendido"))
+                
+                if sort_by == "Cantidad vendida":
+                    df_product_sales.sort_values(by='quantity', ascending=False, inplace=True)
+                else:
+                    df_product_sales.sort_values(by='total_amount', ascending=False, inplace=True)
+                
+                # Mostrar tabla de productos más vendidos
+                for _, row in df_product_sales.iterrows():
+                    col1, col2 = st.columns([1, 3])
+                    with col1:
+                        st.image(row['thumbnail'], use_column_width=True)
+                    with col2:
+                        st.markdown(f"**{row['title']}**")
+                        st.markdown(f"Cantidad vendida: {row['quantity']}")
+                        st.markdown(f"Monto vendido: ${row['total_amount']:.2f}")
+                        st.markdown("---")
+                        
             # Detalle de ventas
             st.markdown("### Detalle de Ventas")
-            
-            # Obtener ventas ordenadas por fecha
-            sales = st.session_state.ml_api.get_sales(days)
             
             if not sales:
                 st.info("No hay ventas en el período seleccionado")
