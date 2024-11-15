@@ -263,10 +263,13 @@ def show_metrics_page():
                     for item in order.get('order_items', []):
                         product_id = item['item']['id']
                         
+                        # Obtener información completa del item para obtener el SKU
+                        item_info = st.session_state.ml_api.get_item_info(product_id)
+                        
                         # Obtener SKU
                         seller_sku = "N/A"
-                        if 'item' in item and 'attributes' in item['item']:
-                            for attr in item['item']['attributes']:
+                        if item_info and 'attributes' in item_info:
+                            for attr in item_info['attributes']:
                                 if attr['id'] == 'SELLER_SKU':
                                     seller_sku = attr['value_name']
                                     break
@@ -306,14 +309,12 @@ def show_metrics_page():
             if not sales:
                 st.info("No hay ventas en el período seleccionado")
             else:
-                for order in sales:  # Ya vienen ordenadas de más nueva a más vieja
-                    # Convertir fecha a zona horaria local (UTC-3)
+                for order in sales:
                     date_created = (
                         datetime.fromisoformat(order['date_created'].replace('Z', '+00:00'))
-                        + timedelta(hours=1)  # Ajustar de UTC-4 a UTC-3
+                        + timedelta(hours=1)
                     ).strftime('%d/%m/%Y %H:%M')
                     
-                    # Calcular total de la orden
                     order_total = sum(
                         float(item.get('unit_price', 0)) * float(item.get('quantity', 1))
                         for item in order.get('order_items', [])
@@ -321,17 +322,18 @@ def show_metrics_page():
                     
                     expander_title = f"Orden #{order['id']} - {date_created} - Total: ${order_total:,.2f}"
                     with st.expander(expander_title):
-                        # Información del comprador
                         buyer = order.get('buyer', {})
                         st.markdown(f"**Comprador:** {buyer.get('nickname', 'N/A')}")
                         
-                        # Tabla de productos
                         products_data = []
                         for item in order.get('order_items', []):
-                            # Obtener SKU para cada item
+                            # Obtener información completa del item para el SKU
+                            item_info = st.session_state.ml_api.get_item_info(item['item']['id'])
+                            
+                            # Obtener SKU
                             seller_sku = "N/A"
-                            if 'item' in item and 'attributes' in item['item']:
-                                for attr in item['item']['attributes']:
+                            if item_info and 'attributes' in item_info:
+                                for attr in item_info['attributes']:
                                     if attr['id'] == 'SELLER_SKU':
                                         seller_sku = attr['value_name']
                                         break
@@ -351,12 +353,10 @@ def show_metrics_page():
                             use_container_width=True
                         )
                         
-                        # Estado del envío
                         shipping = order.get('shipping', {})
                         if shipping:
                             st.markdown(f"**Envío ID:** {shipping.get('id', 'N/A')}")
                         
-                        # Estado de la orden y tags
                         col1, col2 = st.columns(2)
                         with col1:
                             st.markdown(f"**Estado:** {order.get('status', 'N/A')}")
@@ -365,7 +365,6 @@ def show_metrics_page():
                             if tags:
                                 st.markdown(f"**Tags:** {', '.join(tags)}")
                 
-                # Botón para exportar a Excel
                 if st.download_button(
                     "📥 Descargar Detalle de Ventas",
                     create_sales_excel(sales),
