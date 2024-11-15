@@ -263,18 +263,18 @@ def show_metrics_page():
                     for item in order.get('order_items', []):
                         product_id = item['item']['id']
                         
-                        # Obtener el SKU de los atributos del item
-                        sku = 'N/A'
+                        # Obtener SKU
+                        seller_sku = "N/A"
                         if 'item' in item and 'attributes' in item['item']:
                             for attr in item['item']['attributes']:
-                                if attr.get('id') == 'SELLER_SKU':
-                                    sku = attr.get('value_name', 'N/A')
+                                if attr['id'] == 'SELLER_SKU':
+                                    seller_sku = attr['value_name']
                                     break
                         
                         if product_id not in product_sales:
                             product_sales[product_id] = {
                                 'title': item['item']['title'],
-                                'sku': sku,
+                                'seller_sku': seller_sku,
                                 'quantity': 0,
                                 'total_amount': 0
                             }
@@ -295,7 +295,7 @@ def show_metrics_page():
                 # Mostrar tabla de productos más vendidos
                 for _, row in df_product_sales.iterrows():
                     st.markdown(f"**{row['title']}**")
-                    st.markdown(f"SKU: {row['sku']}")
+                    st.markdown(f"SKU: {row['seller_sku']}")
                     st.markdown(f"Cantidad vendida: {row['quantity']}")
                     st.markdown(f"Monto vendido: ${row['total_amount']:.2f}")
                     st.markdown("---")
@@ -306,12 +306,14 @@ def show_metrics_page():
             if not sales:
                 st.info("No hay ventas en el período seleccionado")
             else:
-                for order in sales:
+                for order in sales:  # Ya vienen ordenadas de más nueva a más vieja
+                    # Convertir fecha a zona horaria local (UTC-3)
                     date_created = (
                         datetime.fromisoformat(order['date_created'].replace('Z', '+00:00'))
-                        + timedelta(hours=1)
+                        + timedelta(hours=1)  # Ajustar de UTC-4 a UTC-3
                     ).strftime('%d/%m/%Y %H:%M')
                     
+                    # Calcular total de la orden
                     order_total = sum(
                         float(item.get('unit_price', 0)) * float(item.get('quantity', 1))
                         for item in order.get('order_items', [])
@@ -319,21 +321,23 @@ def show_metrics_page():
                     
                     expander_title = f"Orden #{order['id']} - {date_created} - Total: ${order_total:,.2f}"
                     with st.expander(expander_title):
+                        # Información del comprador
                         buyer = order.get('buyer', {})
                         st.markdown(f"**Comprador:** {buyer.get('nickname', 'N/A')}")
                         
+                        # Tabla de productos
                         products_data = []
                         for item in order.get('order_items', []):
-                            # Obtener SKU para cada item en el detalle
-                            sku = 'N/A'
+                            # Obtener SKU para cada item
+                            seller_sku = "N/A"
                             if 'item' in item and 'attributes' in item['item']:
                                 for attr in item['item']['attributes']:
-                                    if attr.get('id') == 'SELLER_SKU':
-                                        sku = attr.get('value_name', 'N/A')
+                                    if attr['id'] == 'SELLER_SKU':
+                                        seller_sku = attr['value_name']
                                         break
-                            
+                                        
                             products_data.append({
-                                'SKU': sku,
+                                'SKU': seller_sku,
                                 'Producto': item.get('item', {}).get('title', 'N/A'),
                                 'Cantidad': item.get('quantity', 0),
                                 'Precio Unit.': f"${float(item.get('unit_price', 0)):,.2f}",
@@ -347,10 +351,12 @@ def show_metrics_page():
                             use_container_width=True
                         )
                         
+                        # Estado del envío
                         shipping = order.get('shipping', {})
                         if shipping:
                             st.markdown(f"**Envío ID:** {shipping.get('id', 'N/A')}")
                         
+                        # Estado de la orden y tags
                         col1, col2 = st.columns(2)
                         with col1:
                             st.markdown(f"**Estado:** {order.get('status', 'N/A')}")
@@ -359,6 +365,7 @@ def show_metrics_page():
                             if tags:
                                 st.markdown(f"**Tags:** {', '.join(tags)}")
                 
+                # Botón para exportar a Excel
                 if st.download_button(
                     "📥 Descargar Detalle de Ventas",
                     create_sales_excel(sales),
