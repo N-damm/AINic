@@ -285,10 +285,16 @@ def show_metrics_page():
                 
                 # Mostrar tabla de productos más vendidos
                 for _, row in df_product_sales.iterrows():
-                    col1, col2 = st.columns([1, 3])
-                    with col1:
-                        st.image(row['thumbnail'], use_column_width=True)
-                    with col2:
+                    if 'thumbnail' in row and row['thumbnail']:
+                        col1, col2 = st.columns([1, 3])
+                        with col1:
+                            st.image(row['thumbnail'], use_column_width=True)
+                        with col2:
+                            st.markdown(f"**{row['title']}**")
+                            st.markdown(f"Cantidad vendida: {row['quantity']}")
+                            st.markdown(f"Monto vendido: ${row['total_amount']:.2f}")
+                            st.markdown("---")
+                    else:
                         st.markdown(f"**{row['title']}**")
                         st.markdown(f"Cantidad vendida: {row['quantity']}")
                         st.markdown(f"Monto vendido: ${row['total_amount']:.2f}")
