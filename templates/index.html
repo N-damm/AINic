@@ -1,0 +1,51 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Manager</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">ML Manager</h1>
+            <div class="space-x-4">
+                <a href="/" class="hover:text-gray-200">Inicio</a>
+                <a href="/products" class="hover:text-gray-200">Productos</a>
+                <a href="/questions" class="hover:text-gray-200">Preguntas</a>
+                <a href="/metrics" class="hover:text-gray-200">Métricas</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-bold mb-4">Productos</h2>
+                <p class="text-gray-600 mb-4">Gestiona tu inventario y publicaciones</p>
+                <a href="/products" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Ver Productos
+                </a>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-bold mb-4">Preguntas</h2>
+                <p class="text-gray-600 mb-4">Responde preguntas de compradores</p>
+                <a href="/questions" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Ver Preguntas
+                </a>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-bold mb-4">Métricas</h2>
+                <p class="text-gray-600 mb-4">Analiza el rendimiento de tu tienda</p>
+                <a href="/metrics" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Ver Métricas
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

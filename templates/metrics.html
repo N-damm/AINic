@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Manager - Métricas</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">ML Manager</h1>
+            <div class="space-x-4">
+                <a href="/" class="hover:text-gray-200">Inicio</a>
+                <a href="/products" class="hover:text-gray-200">Productos</a>
+                <a href="/questions" class="hover:text-gray-200">Preguntas</a>
+                <a href="/metrics" class="hover:text-gray-200">Métricas</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-8">
+        <div class="bg-white rounded-lg shadow p-6">
+            <!-- Header con título y selector de días -->
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Métricas de Ventas</h2>
+                <div class="flex items-center gap-2">
+                    <label for="daysInput">Últimos</label>
+                    <input 
+                        type="number" 
+                        id="daysInput" 
+                        class="border rounded px-3 py-2 w-20 text-center" 
+                        value="7"
+                        min="1"
+                        max="90"
+                    >
+                    <label for="daysInput">días</label>
+                    <button 
+                        onclick="loadMetrics()"
+                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200"
+                    >
+                        Actualizar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Indicador de carga -->
+            <div id="loadingIndicator" class="text-center py-12 hidden">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p class="mt-2 text-gray-600">Cargando datos...</p>
+            </div>
+
+            <!-- Contenedor principal de métricas -->
+            <div id="metricsContent" class="hidden">
+                <!-- Cards de métricas principales -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-blue-50 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold text-blue-800 mb-2">Total Ventas</h3>
+                        <p id="totalSales" class="text-3xl font-bold text-blue-600">-</p>
+                        <p id="salesComparison" class="text-sm text-gray-600 mt-1">vs periodo anterior</p>
+                    </div>
+                    <div class="bg-green-50 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold text-green-800 mb-2">Ingresos</h3>
+                        <p id="totalRevenue" class="text-3xl font-bold text-green-600">-</p>
+                        <p id="revenueComparison" class="text-sm text-gray-600 mt-1">vs periodo anterior</p>
+                    </div>
+                    <div class="bg-purple-50 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold text-purple-800 mb-2">Items Vendidos</h3>
+                        <p id="totalItems" class="text-3xl font-bold text-purple-600">-</p>
+                        <p id="itemsComparison" class="text-sm text-gray-600 mt-1">vs periodo anterior</p>
+                    </div>
+                </div>
+
+                <!-- Gráfico de ventas -->
+                <div class="mb-8">
+                    <div id="salesChart" class="w-full h-96 border rounded-lg bg-white"></div>
+                </div>
+
+                <!-- Tabla de productos más vendidos -->
+                <div class="bg-white rounded-lg">
+                    <h3 class="text-xl font-bold mb-4">Productos más vendidos</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Producto
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Cantidad
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Ingresos
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        % del Total
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="topProductsTable" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mensaje cuando no hay datos -->
+            <div id="noDataMessage" class="text-center py-12 hidden">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No hay datos</h3>
+                <p class="mt-1 text-sm text-gray-500">No se encontraron ventas para el período seleccionado.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Función para formatear moneda en pesos argentinos
+        const formatCurrency = (amount) => {
+            return new Intl.NumberFormat('es-AR', {
+                style: 'currency',
+                currency: 'ARS',
+                minimumFractionDigits: 2
+            }).format(amount);
+        };
+
+        // Función para formatear números con separadores de miles
+        const formatNumber = (number) => {
+            return new Intl.NumberFormat('es-AR').format(number);
+        };
+
+        // Función para formatear fechas
+        const formatDate = (dateString) => {
+            return new Date(dateString).toLocaleDateString('es-AR', {
+                timeZone: 'America/Argentina/Buenos_Aires',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        };
+
+        // Función para calcular el porcentaje de cambio
+        const calculateChange = (current, previous) => {
+            if (!previous) return null;
+            const change = ((current - previous) / previous) * 100;
+            const sign = change > 0 ? '+' : '';
+            return `${sign}${change.toFixed(1)}%`;
+        };
+
+        async function loadMetrics() {
+            const loading = document.getElementById('loadingIndicator');
+            const content = document.getElementById('metricsContent');
+            const noData = document.getElementById('noDataMessage');
+            
+            try {
+                // Mostrar loading y ocultar contenido
+                loading.classList.remove('hidden');
+                content.classList.add('hidden');
+                noData.classList.add('hidden');
+                
+                // Obtener días seleccionados
+                const days = parseInt(document.getElementById('daysInput').value);
+                if (days < 1 || days > 90) {
+                    alert('Por favor ingresa un número de días entre 1 y 90');
+                    return;
+                }
+                
+                // Obtener datos
+                const response = await fetch(`/api/sales?days=${days}`);
+                if (!response.ok) throw new Error('Error al obtener datos');
+                const sales = await response.json();
+                
+                if (!sales || sales.length === 0) {
+                    noData.classList.remove('hidden');
+                    return;
+                }
+                
+                // Procesar datos
+                const metrics = processData(sales);
+                
+                // Actualizar métricas principales
+                updateMainMetrics(metrics);
+                
+                // Crear gráfico
+                createSalesChart(metrics.salesByDate);
+                
+                // Actualizar tabla de productos
+                updateProductsTable(metrics.productSales, metrics.totalRevenue);
+                
+                // Mostrar contenido
+                content.classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar las métricas');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function processData(sales) {
+            const salesByDate = {};
+            const productSales = {};
+            let totalRevenue = 0;
+            let totalItems = 0;
+
+            sales.forEach(order => {
+                const date = formatDate(order.date_created);
+                salesByDate[date] = salesByDate[date] || 0;
+                
+                order.order_items.forEach(item => {
+                    const revenue = item.unit_price * item.quantity;
+                    totalRevenue += revenue;
+                    totalItems += item.quantity;
+                    salesByDate[date] += revenue;
+                    
+                    const productId = item.item.id;
+                    if (!productSales[productId]) {
+                        productSales[productId] = {
+                            title: item.item.title,
+                            quantity: 0,
+                            revenue: 0
+                        };
+                    }
+                    productSales[productId].quantity += item.quantity;
+                    productSales[productId].revenue += revenue;
+                });
+            });
+
+            return {
+                totalSales: sales.length,
+                totalRevenue,
+                totalItems,
+                salesByDate,
+                productSales
+            };
+        }
+
+        function updateMainMetrics(metrics) {
+            document.getElementById('totalSales').textContent = formatNumber(metrics.totalSales);
+            document.getElementById('totalRevenue').textContent = formatCurrency(metrics.totalRevenue);
+            document.getElementById('totalItems').textContent = formatNumber(metrics.totalItems);
+        }
+
+        function createSalesChart(salesByDate) {
+            const dates = Object.keys(salesByDate).sort((a, b) => new Date(a) - new Date(b));
+            const values = dates.map(date => salesByDate[date]);
+            
+            const layout = {
+                title: 'Ventas Diarias',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                xaxis: {
+                    title: 'Fecha',
+                    tickangle: -45
+                },
+                yaxis: {
+                    title: 'Ingresos ($)',
+                    tickformat: ',.0f'
+                },
+                margin: {
+                    l: 60,
+                    r: 20,
+                    b: 80,
+                    t: 40
+                }
+            };
+
+            Plotly.newPlot('salesChart', [{
+                x: dates,
+                y: values,
+                type: 'bar',
+                marker: {
+                    color: 'rgb(59, 130, 246)'
+                }
+            }], layout);
+        }
+
+        function updateProductsTable(productSales, totalRevenue) {
+            const tableBody = document.getElementById('topProductsTable');
+            tableBody.innerHTML = '';
+            
+            Object.values(productSales)
+                .sort((a, b) => b.quantity - a.quantity)
+                .slice(0, 10)
+                .forEach(product => {
+                    const row = document.createElement('tr');
+                    const percentage = (product.revenue / totalRevenue * 100).toFixed(1);
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${product.title}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatNumber(product.quantity)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(product.revenue)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${percentage}%</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+        }
+
+        // Validación del input de días
+        document.getElementById('daysInput').addEventListener('input', function(e) {
+            let value = parseInt(e.target.value);
+            if (value < 1) e.target.value = 1;
+            if (value > 90) e.target.value = 90;
+        });
+
+        // Event listener para el Enter en el input de días
+        document.getElementById('daysInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                loadMetrics();
+            }
+        });
+
+        // Cargar métricas iniciales
+        loadMetrics();
+    </script>
+</body>
+</html>

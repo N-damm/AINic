@@ -1,0 +1,154 @@
+<!-- templates/products.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Manager - Productos</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">ML Manager</h1>
+            <div class="space-x-4">
+                <a href="/" class="hover:text-gray-200">Inicio</a>
+                <a href="/products" class="hover:text-gray-200">Productos</a>
+                <a href="/questions" class="hover:text-gray-200">Preguntas</a>
+                <a href="/metrics" class="hover:text-gray-200">Métricas</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-8">
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Productos</h2>
+                <div class="flex space-x-4">
+                    <select id="statusFilter" class="border rounded px-3 py-2">
+                        <option value="all">Todos</option>
+                        <option value="active">Activos</option>
+                        <option value="paused">Pausados</option>
+                        <option value="closed">Finalizados</option>
+                    </select>
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="Buscar productos..." 
+                        class="border rounded px-3 py-2"
+                    >
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="px-6 py-3 text-left">ID</th>
+                            <th class="px-6 py-3 text-left">Título</th>
+                            <th class="px-6 py-3 text-left">Precio</th>
+                            <th class="px-6 py-3 text-left">Stock</th>
+                            <th class="px-6 py-3 text-left">Estado</th>
+                            <th class="px-6 py-3 text-left">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productsTable"></tbody>
+                </table>
+                
+                <div id="loadingIndicator" class="text-center py-4 hidden">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+                </div>
+                
+                <div id="loadMoreContainer" class="text-center py-4 hidden">
+                    <button 
+                        id="loadMoreButton"
+                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                        onclick="loadMoreProducts()"
+                    >
+                        Cargar más productos
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentOffset = 0;
+        let isLoading = false;
+        let hasMore = true;
+        
+        async function loadProducts(replace = true) {
+            if (isLoading) return;
+            
+            try {
+                isLoading = true;
+                document.getElementById('loadingIndicator').classList.remove('hidden');
+                
+                const statusFilter = document.getElementById('statusFilter').value;
+                const searchText = document.getElementById('searchInput').value.toLowerCase();
+                
+                const response = await fetch(`/api/products?offset=${currentOffset}&limit=20`);
+                const data = await response.json();
+                
+                const tableBody = document.getElementById('productsTable');
+                const filteredProducts = data.products.filter(product => {
+                    return (statusFilter === 'all' || product.status === statusFilter) &&
+                           product.title.toLowerCase().includes(searchText);
+                });
+                
+                if (replace) {
+                    tableBody.innerHTML = '';
+                }
+                
+                filteredProducts.forEach(product => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="border-t px-6 py-4">${product.id}</td>
+                        <td class="border-t px-6 py-4">${product.title}</td>
+                        <td class="border-t px-6 py-4">$${product.price}</td>
+                        <td class="border-t px-6 py-4">${product.available_quantity}</td>
+                        <td class="border-t px-6 py-4">${product.status}</td>
+                        <td class="border-t px-6 py-4">
+                            <a href="${product.permalink}" target="_blank" 
+                               class="text-blue-600 hover:text-blue-800">
+                                Ver publicación
+                            </a>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+                
+                hasMore = data.has_more;
+                document.getElementById('loadMoreContainer').classList.toggle('hidden', !hasMore);
+                
+            } catch (error) {
+                console.error('Error:', error);
+            } finally {
+                isLoading = false;
+                document.getElementById('loadingIndicator').classList.add('hidden');
+            }
+        }
+        
+        function loadMoreProducts() {
+            currentOffset += 20;
+            loadProducts(false);
+        }
+
+        let searchTimeout;
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentOffset = 0;
+                loadProducts();
+            }, 300);
+        });
+
+        document.getElementById('statusFilter').addEventListener('change', () => {
+            currentOffset = 0;
+            loadProducts();
+        });
+        
+        loadProducts();
+    </script>
+</body>
+</html>

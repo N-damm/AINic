@@ -1,0 +1,232 @@
+<!-- templates/questions.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Manager - Preguntas</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">ML Manager</h1>
+            <div class="space-x-4">
+                <a href="/" class="hover:text-gray-200">Inicio</a>
+                <a href="/products" class="hover:text-gray-200">Productos</a>
+                <a href="/questions" class="hover:text-gray-200">Preguntas</a>
+                <a href="/metrics" class="hover:text-gray-200">Métricas</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-8">
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Preguntas</h2>
+                <select id="statusFilter" class="border rounded px-3 py-2">
+                    <option value="UNANSWERED">Sin Responder</option>
+                    <option value="ANSWERED">Respondidas</option>
+                </select>
+
+            </div>
+
+            <div id="questionsList" class="space-y-4"></div>
+            
+            <div id="loadingIndicator" class="text-center py-4 hidden">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+            </div>
+            
+            <div id="loadMoreContainer" class="text-center py-4 hidden">
+                <button 
+                    id="loadMoreButton"
+                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                    onclick="loadMoreQuestions()"
+                >
+                    Cargar más preguntas
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentOffset = 0;
+        let isLoading = false;
+        let hasMore = true;
+        
+        async function loadQuestions(replace = true) {
+            if (isLoading) return;
+            
+            try {
+                isLoading = true;
+                document.getElementById('loadingIndicator').classList.remove('hidden');
+                
+                const status = document.getElementById('statusFilter').value;
+                const response = await fetch(`/api/questions?status=${status}&offset=${currentOffset}&limit=20`);
+                const data = await response.json();
+                
+                const questionsList = document.getElementById('questionsList');
+                if (replace) {
+                    questionsList.innerHTML = '';
+                }
+                
+                data.questions.forEach(question => {
+                    const card = document.createElement('div');
+                    card.className = 'border rounded-lg p-4';
+                    
+                    const date = new Date(question.date_created).toLocaleString();
+                    
+                    let answerHtml = '';
+                    if (question.answer) {
+                        answerHtml = `
+                            <div class="mt-4 pl-4 border-l-4 border-green-500">
+                                <p class="font-semibold">Respuesta:</p>
+                                <p>${question.answer.text}</p>
+                                <p class="text-sm text-gray-500 mt-1">
+                                    ${new Date(question.answer.date_created).toLocaleString()}
+                                </p>
+                            </div>
+                        `;
+                    } else {
+                        answerHtml = `
+                            <div class="mt-4">
+                                <textarea 
+                                    id="answer_${question.id}"
+                                    class="w-full p-2 border rounded"
+                                    rows="3"
+                                    placeholder="Escribe tu respuesta..."
+                                ></textarea>
+                                <button 
+                                    onclick="answerQuestion('${question.id}')"
+                                    class="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                                >
+                                    Responder
+                                </button>
+                            </div>
+                        `;
+                    }
+                    
+                    // Información del producto si está disponible
+                    const productInfo = question.item ? `
+                        <div class="mt-2 text-sm">
+                            <p class="font-semibold">Producto:</p>
+                            <p>${question.item.title}</p>
+                            <a href="${question.item.permalink}" 
+                               target="_blank" 
+                               class="text-blue-600 hover:text-blue-800">
+                                Ver publicación
+                            </a>
+                        </div>
+                    ` : '';
+                    
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-semibold">${question.text}</p>
+                                <p class="text-sm text-gray-500">${date}</p>
+                                ${productInfo}
+                            </div>
+                            <span class="px-2 py-1 text-sm rounded ${
+                                question.answer ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            }">
+                                ${question.answer ? 'Respondida' : 'Sin Responder'}
+                            </span>
+                        </div>
+                        ${answerHtml}
+                    `;
+                    
+                    questionsList.appendChild(card);
+                });
+                
+                hasMore = data.has_more;
+                document.getElementById('loadMoreContainer').classList.toggle('hidden', !hasMore);
+                
+            } catch (error) {
+                console.error('Error:', error);
+            } finally {
+                isLoading = false;
+                document.getElementById('loadingIndicator').classList.add('hidden');
+            }
+        }
+        
+        async function answerQuestion(questionId) {
+            const answerText = document.getElementById(`answer_${questionId}`).value;
+            if (!answerText.trim()) {
+                alert('Por favor escribe una respuesta');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/questions/answer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        question_id: questionId,
+                        answer: answerText
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert('Respuesta enviada exitosamente');
+                    // Resetear y recargar
+                    currentOffset = 0;
+                    loadQuestions();
+                } else {
+                    alert('Error al enviar la respuesta');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al enviar la respuesta');
+            }
+        }
+        
+        function loadMoreQuestions() {
+            currentOffset += 20;
+            loadQuestions(false);
+        }
+
+        // Event listener para el filtro de estado
+        document.getElementById('statusFilter').addEventListener('change', () => {
+            currentOffset = 0;
+            loadQuestions();
+        });
+        
+        // Cargar preguntas iniciales
+        loadQuestions();
+
+        // Función para actualizar automáticamente las preguntas sin responder
+        let autoRefreshInterval;
+        function startAutoRefresh() {
+            stopAutoRefresh(); // Detener si ya existe
+            autoRefreshInterval = setInterval(() => {
+                const status = document.getElementById('statusFilter').value;
+                if (status === 'UNANSWERED') {
+                    currentOffset = 0;
+                    loadQuestions();
+                }
+            }, 60000); // Actualizar cada minuto
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        }
+
+        // Iniciar actualización automática
+        startAutoRefresh();
+
+        // Detener actualización cuando la página no está visible
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopAutoRefresh();
+            } else {
+                startAutoRefresh();
+            }
+        });
+    </script>
+</body>
+</html>
