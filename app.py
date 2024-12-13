@@ -410,6 +410,90 @@ def create_sales_excel(sales):
     df_export = pd.DataFrame(orders_data)
     return df_export.to_csv(index=False).encode('utf-8')
 
+def show_questions_page():
+    """Página de preguntas"""
+    st.title("Preguntas")
+    
+    # Selector de estado
+    status = st.selectbox(
+        "Filtrar preguntas por estado:",
+        ["Sin Responder", "Respondidas"]
+    )
+    
+    status_map = {
+        "Sin Responder": "UNANSWERED",
+        "Respondidas": "ANSWERED"
+    }
+    
+    # Cargar preguntas
+    with st.spinner("Cargando preguntas..."):
+        questions = st.session_state.ml_api.get_questions(status_map[status])
+    
+    if not questions:
+        st.info(f"No hay preguntas {status.lower()}")
+        return
+    
+    # Ordenar por fecha
+    questions.sort(key=lambda x: x['date_created'], reverse=True)
+    
+    # Mostrar preguntas
+    for q in questions:
+        # Crear título para el expander
+        product_title = q.get('item', {}).get('title', 'Producto sin título')
+        question_preview = q['text'][:50] + "..." if len(q['text']) > 50 else q['text']
+        expander_title = f"{product_title} - {question_preview}"
+        
+        with st.expander(expander_title):
+            # Información del producto
+            st.markdown("**Producto:**")
+            col1, col2 = st.columns([3,1])
+            with col1:
+                st.write(product_title)
+            with col2:
+                if 'permalink' in q.get('item', {}):
+                    st.markdown(f"[Ver publicación]({q['item']['permalink']})")
+            
+            # Pregunta y respuesta
+            st.markdown("**Pregunta:**")
+            st.write(q['text'])
+            
+            if q.get('answer'):
+                st.markdown("**Respuesta:**")
+                st.write(q['answer']['text'])
+            else:
+                # Campo para responder
+                answer_text = st.text_area(
+                    "Responder:",
+                    key=f"answer_{q['id']}"
+                )
+                
+                # Botón para enviar respuesta
+                if st.button("Enviar Respuesta", key=f"send_{q['id']}"):
+                    if answer_text.strip():
+                        with st.spinner("Enviando respuesta..."):
+                            if st.session_state.ml_api.answer_question(q['id'], answer_text):
+                                st.success("¡Respuesta enviada exitosamente!")
+                                st.rerun()  # Recargar la página
+                            else:
+                                st.error("Error al enviar la respuesta")
+                    else:
+                        st.warning("Por favor, escribe una respuesta")
+            
+            # Fechas y MLA
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                date_created = datetime.fromisoformat(q['date_created'][:-6])
+                st.write(f"📅 Pregunta: {date_created.strftime('%d/%m/%Y %H:%M')}")
+            with col2:
+                if q.get('answer'):
+                    answer_date = datetime.fromisoformat(q['answer']['date_created'][:-6])
+                    st.write(f"📅 Respuesta: {answer_date.strftime('%d/%m/%Y %H:%M')}")
+            with col3:
+                st.write(f"🏷️ MLA: {q.get('item', {}).get('id', 'N/A')}")
+            
+            # Separador
+            st.markdown("---")
+
 def main():
     st.set_page_config(
         page_title="ML Manager",
@@ -437,3 +521,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

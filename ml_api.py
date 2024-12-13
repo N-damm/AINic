@@ -201,3 +201,28 @@ class MLApi:
         except Exception as e:
             print(f"Error obteniendo ventas: {str(e)}")
             return []
+        
+    def answer_question(self, question_id, answer_text):
+        try:
+            url = f"https://api.mercadolibre.com/answers"
+            
+            payload = {
+                "question_id": question_id,
+                "text": answer_text
+            }
+            
+            response = requests.post(
+                url,
+                headers=self._get_headers(),
+                json=payload
+            )
+            
+            if response.status_code == 200:
+                return True
+                
+            print(f"Error respondiendo pregunta: {response.text}")
+            return False
+            
+        except Exception as e:
+            print(f"Error respondiendo pregunta: {str(e)}")
+            return False
