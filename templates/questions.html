@@ -72,9 +72,32 @@
                 
                 data.questions.forEach(question => {
                     const card = document.createElement('div');
-                    card.className = 'border rounded-lg p-4';
+                    card.className = 'border rounded-lg p-4 bg-white';
                     
                     const date = new Date(question.date_created).toLocaleString();
+                    
+                    // Construir HTML para la información del producto
+                    const productInfo = question.product_details ? `
+                        <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                            <div class="flex items-start space-x-4">
+                                ${question.product_details.thumbnail ? 
+                                    `<img src="${question.product_details.thumbnail}" 
+                                        alt="${question.product_details.title}" 
+                                        class="w-20 h-20 object-contain bg-white rounded">`
+                                    : ''
+                                }
+                                <div class="flex-1">
+                                    <h4 class="font-medium">${question.product_details.title}</h4>
+                                    <p class="text-sm text-gray-600">SKU: ${question.product_details.sku}</p>
+                                    <a href="${question.product_details.permalink}" 
+                                    target="_blank" 
+                                    class="text-sm text-blue-600 hover:text-blue-800">
+                                        Ver publicación
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    ` : '';
                     
                     let answerHtml = '';
                     if (question.answer) {
@@ -106,25 +129,11 @@
                         `;
                     }
                     
-                    // Información del producto si está disponible
-                    const productInfo = question.item ? `
-                        <div class="mt-2 text-sm">
-                            <p class="font-semibold">Producto:</p>
-                            <p>${question.item.title}</p>
-                            <a href="${question.item.permalink}" 
-                               target="_blank" 
-                               class="text-blue-600 hover:text-blue-800">
-                                Ver publicación
-                            </a>
-                        </div>
-                    ` : '';
-                    
                     card.innerHTML = `
                         <div class="flex justify-between items-start">
                             <div>
                                 <p class="font-semibold">${question.text}</p>
                                 <p class="text-sm text-gray-500">${date}</p>
-                                ${productInfo}
                             </div>
                             <span class="px-2 py-1 text-sm rounded ${
                                 question.answer ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
@@ -132,6 +141,7 @@
                                 ${question.answer ? 'Respondida' : 'Sin Responder'}
                             </span>
                         </div>
+                        ${productInfo}
                         ${answerHtml}
                     `;
                     
@@ -147,8 +157,7 @@
                 isLoading = false;
                 document.getElementById('loadingIndicator').classList.add('hidden');
             }
-        }
-        
+        }        
         async function answerQuestion(questionId) {
             const answerText = document.getElementById(`answer_${questionId}`).value;
             if (!answerText.trim()) {

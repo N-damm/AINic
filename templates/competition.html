@@ -1,0 +1,309 @@
+<!-- templates/competition.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Manager - Competencia</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">ML Manager</h1>
+            <div class="space-x-4">
+                <a href="/" class="hover:text-gray-200">Inicio</a>
+                <a href="/products" class="hover:text-gray-200">Productos</a>
+                <a href="/questions" class="hover:text-gray-200">Preguntas</a>
+                <a href="/metrics" class="hover:text-gray-200">Métricas</a>
+                <a href="/competition" class="hover:text-gray-200">Competencia</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-8">
+        <!-- Agregar Competidor -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h3 class="text-xl font-bold mb-4">Agregar Competidor</h3>
+            <div class="flex gap-4">
+                <input 
+                    type="text" 
+                    id="competitorUrl" 
+                    placeholder="URL del producto competidor" 
+                    class="flex-1 border rounded px-4 py-2"
+                >
+                <button 
+                    onclick="addCompetitor()"
+                    class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+                >
+                    Agregar
+                </button>
+            </div>
+        </div>
+
+        <!-- Lista de Productos con Competencia -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-xl font-bold mb-4">Análisis de Competencia</h3>
+            
+            <!-- Filtros -->
+            <div class="flex gap-4 mb-6">
+                <select id="filterAlert" class="border rounded px-4 py-2">
+                    <option value="all">Todas las alertas</option>
+                    <option value="price">Alertas de precio</option>
+                    <option value="stock">Alertas de stock</option>
+                    <option value="sales">Alertas de ventas</option>
+                </select>
+                <select id="filterDiff" class="border rounded px-4 py-2">
+                    <option value="all">Todas las diferencias</option>
+                    <option value="higher">Precio mayor al competidor</option>
+                    <option value="lower">Precio menor al competidor</option>
+                    <option value="equal">Precio igual</option>
+                </select>
+                <input 
+                    type="text" 
+                    id="searchProduct" 
+                    placeholder="Buscar producto..." 
+                    class="flex-1 border rounded px-4 py-2"
+                >
+            </div>
+
+            <!-- Tabla de Productos -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mi Producto</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mi Precio</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Competidor</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Competidor</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Diferencia</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Última Actualización</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="competitionTable">
+                        <!-- Los datos se cargarán aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Modal de Historial -->
+        <div id="historyModal" class="fixed inset-0 bg-black bg-opacity-50 hidden">
+            <div class="bg-white rounded-lg max-w-4xl mx-auto mt-20 p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Historial de Precios</h3>
+                    <button onclick="closeHistoryModal()" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="priceHistory" class="h-96"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Funciones de utilidad
+        const formatCurrency = (amount) => {
+            return new Intl.NumberFormat('es-AR', {
+                style: 'currency',
+                currency: 'ARS'
+            }).format(amount);
+        };
+
+        const formatDate = (dateString) => {
+            return new Date(dateString).toLocaleString('es-AR', {
+                timeZone: 'America/Argentina/Buenos_Aires'
+            });
+        };
+
+        // Función para agregar competidor
+        async function addCompetitor() {
+            const url = document.getElementById('competitorUrl').value.trim();
+            if (!url) {
+                alert('Por favor ingresa la URL del producto competidor');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/competition/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('Competidor agregado exitosamente');
+                    document.getElementById('competitorUrl').value = '';
+                    loadCompetitionData();
+                } else {
+                    alert(result.error || 'Error al agregar competidor');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al agregar competidor');
+            }
+        }
+
+        // Función para cargar datos de competencia
+        async function loadCompetitionData() {
+            try {
+                const alertFilter = document.getElementById('filterAlert').value;
+                const diffFilter = document.getElementById('filterDiff').value;
+                const searchText = document.getElementById('searchProduct').value.toLowerCase();
+
+                const response = await fetch(`/api/competition/data?alert=${alertFilter}&diff=${diffFilter}`);
+                const data = await response.json();
+
+                const tableBody = document.getElementById('competitionTable');
+                tableBody.innerHTML = '';
+
+                data
+                    .filter(item => item.myProduct.title.toLowerCase().includes(searchText))
+                    .forEach(item => {
+                        const priceDiff = item.myProduct.price - item.competitor.price;
+                        const diffClass = priceDiff > 0 ? 'text-red-600' : priceDiff < 0 ? 'text-green-600' : 'text-gray-600';
+                        
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="px-6 py-4">
+                                <div>
+                                    <p class="font-medium">${item.myProduct.title}</p>
+                                    <a href="${item.myProduct.url}" target="_blank" class="text-sm text-blue-600 hover:text-blue-800">
+                                        Ver publicación
+                                    </a>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">${formatCurrency(item.myProduct.price)}</td>
+                            <td class="px-6 py-4">
+                                <div>
+                                    <p class="font-medium">${item.competitor.title}</p>
+                                    <a href="${item.competitor.url}" target="_blank" class="text-sm text-blue-600 hover:text-blue-800">
+                                        Ver publicación
+                                    </a>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">${formatCurrency(item.competitor.price)}</td>
+                            <td class="px-6 py-4 ${diffClass}">
+                                ${priceDiff > 0 ? '+' : ''}${formatCurrency(priceDiff)}
+                            </td>
+                            <td class="px-6 py-4">
+                                <div>
+                                    <p>${formatDate(item.lastUpdate)}</p>
+                                    <p class="text-sm text-gray-500">
+                                        Actualizado hace ${getTimeDiff(item.lastUpdate)}
+                                    </p>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <button 
+                                    onclick="showHistory('${item.myProduct.id}')"
+                                    class="text-blue-600 hover:text-blue-800 mr-2"
+                                >
+                                    Ver historial
+                                </button>
+                                <button 
+                                    onclick="matchPrice('${item.myProduct.id}', ${item.competitor.price})"
+                                    class="text-green-600 hover:text-green-800"
+                                >
+                                    Igualar precio
+                                </button>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Función para mostrar historial de precios
+        async function showHistory(productId) {
+            try {
+                const response = await fetch(`/api/competition/history/${productId}`);
+                const data = await response.json();
+
+                // Crear gráfico de historial
+                const traces = [{
+                    name: 'Mi Precio',
+                    x: data.dates,
+                    y: data.myPrices,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    line: { color: 'blue' }
+                }, {
+                    name: 'Precio Competidor',
+                    x: data.dates,
+                    y: data.competitorPrices,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    line: { color: 'red' }
+                }];
+
+                const layout = {
+                    title: 'Historial de Precios',
+                    xaxis: { title: 'Fecha' },
+                    yaxis: { title: 'Precio ($)', tickformat: '$,.2f' }
+                };
+
+                Plotly.newPlot('priceHistory', traces, layout);
+                document.getElementById('historyModal').classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Función para igualar precio
+        async function matchPrice(productId, competitorPrice) {
+            if (confirm(`¿Deseas igualar el precio a ${formatCurrency(competitorPrice)}?`)) {
+                try {
+                    const response = await fetch('/api/competition/match-price', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            productId,
+                            newPrice: competitorPrice
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('Precio actualizado exitosamente');
+                        loadCompetitionData();
+                    } else {
+                        alert(result.error || 'Error al actualizar precio');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error al actualizar precio');
+                }
+            }
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.add('hidden');
+        }
+
+        // Event listeners
+        document.getElementById('filterAlert').addEventListener('change', loadCompetitionData);
+        document.getElementById('filterDiff').addEventListener('change', loadCompetitionData);
+        document.getElementById('searchProduct').addEventListener('input', loadCompetitionData);
+
+        // Cargar datos iniciales
+        loadCompetitionData();
+
+        // Actualizar datos cada 5 minutos
+        setInterval(loadCompetitionData, 300000);
+    </script>
+</body>
+</html>

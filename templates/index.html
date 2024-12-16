@@ -1,4 +1,3 @@
-<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -8,44 +7,518 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100">
+    <!-- Navbar -->
     <nav class="bg-blue-600 text-white p-4">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-2xl font-bold">ML Manager</h1>
-            <div class="space-x-4">
+            <div class="space-x-6">
                 <a href="/" class="hover:text-gray-200">Inicio</a>
                 <a href="/products" class="hover:text-gray-200">Productos</a>
                 <a href="/questions" class="hover:text-gray-200">Preguntas</a>
                 <a href="/metrics" class="hover:text-gray-200">Métricas</a>
+                <a href="/competition" class="hover:text-gray-200">Competencia</a>
             </div>
         </div>
     </nav>
 
-    <div class="container mx-auto p-8">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h2 class="text-xl font-bold mb-4">Productos</h2>
-                <p class="text-gray-600 mb-4">Gestiona tu inventario y publicaciones</p>
-                <a href="/products" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                    Ver Productos
-                </a>
+    <!-- Content -->
+    <div class="container mx-auto p-6">
+        <!-- Resumen General -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <!-- Ventas Hoy -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg text-gray-600 mb-2">Ventas Hoy</h3>
+                <div class="flex flex-col">
+                    <span id="todaySales" class="text-2xl font-bold text-blue-600">$0.00</span>
+                    <span id="salesComparison" class="text-sm text-gray-500">0% vs ayer</span>
+                </div>
             </div>
 
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h2 class="text-xl font-bold mb-4">Preguntas</h2>
-                <p class="text-gray-600 mb-4">Responde preguntas de compradores</p>
-                <a href="/questions" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                    Ver Preguntas
-                </a>
+            <!-- Preguntas sin Responder -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg text-gray-600 mb-2">Preguntas sin Responder</h3>
+                <div class="flex flex-col">
+                    <span id="pendingQuestions" class="text-2xl font-bold text-orange-600">0</span>
+                    <span id="questionsStatus" class="text-sm text-gray-500">Sin preguntas pendientes</span>
+                </div>
             </div>
 
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h2 class="text-xl font-bold mb-4">Métricas</h2>
-                <p class="text-gray-600 mb-4">Analiza el rendimiento de tu tienda</p>
-                <a href="/metrics" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                    Ver Métricas
-                </a>
+            <!-- Productos sin Stock -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg text-gray-600 mb-2">Productos sin Stock</h3>
+                <div class="flex flex-col">
+                    <span id="outOfStock" class="text-2xl font-bold text-red-600">0</span>
+                    <span id="lowStock" class="text-sm text-gray-500">0 con stock bajo</span>
+                </div>
+            </div>
+
+            <!-- Órdenes Pendientes -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg text-gray-600 mb-2">Órdenes Pendientes</h3>
+                <div class="flex flex-col">
+                    <span id="pendingOrders" class="text-2xl font-bold text-green-600">0</span>
+                    <span id="ordersStatus" class="text-sm text-gray-500">Sin órdenes pendientes</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preguntas y Ventas -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Preguntas Urgentes -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-bold mb-4">Preguntas Urgentes</h3>
+                <div id="urgentQuestions" class="space-y-4">
+                    <div class="text-gray-500 text-center py-4">No hay preguntas urgentes</div>
+                </div>
+            </div>
+
+            <!-- Ventas Recientes -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-bold mb-4">Ventas Recientes</h3>
+                <div id="recentSales" class="space-y-4">
+                    <div class="text-gray-500 text-center py-4">No hay ventas recientes</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alertas de Productos -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-xl font-bold mb-4">Alertas de Productos</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alerta</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productAlerts" class="bg-white divide-y divide-gray-200"></tbody>
+                </table>
             </div>
         </div>
     </div>
+
+    <!-- Modal de Detalles de Producto -->
+    <div id="productModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden" style="z-index: 100;">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-3xl bg-white rounded-lg shadow-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold" id="modalTitle">Detalles del Producto</h3>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="modalContent" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalles de Venta -->
+    <div id="saleDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden overflow-y-auto" style="z-index: 100;">
+        <div class="relative mx-auto my-8 p-5 border w-full max-w-4xl bg-white rounded-lg shadow-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Detalles de la Venta</h3>
+                <button onclick="closeSaleModal()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="saleDetailsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Funciones de utilidad
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('es-AR', {
+                style: 'currency',
+                currency: 'ARS'
+            }).format(amount);
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleString('es-AR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function getTimeDiff(dateString) {
+            const now = new Date();
+            const date = new Date(dateString);
+            const diff = now - date;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            return hours;
+        }
+
+        function translateStatus(status) {
+            const statusMap = {
+                'active': 'Activo',
+                'paused': 'Pausado',
+                'closed': 'Finalizado',
+                'under_review': 'En revisión'
+            };
+            return statusMap[status] || status;
+        }
+
+        function closeModal() {
+            document.getElementById('productModal').classList.add('hidden');
+        }
+
+        function closeSaleModal() {
+            document.getElementById('saleDetailsModal').classList.add('hidden');
+        }
+
+        // Funciones principales
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/dashboard/summary');
+                const data = await response.json();
+
+                // Actualizar ventas
+                document.getElementById('todaySales').textContent = formatCurrency(data.sales.today_total);
+                
+                // Actualizar preguntas
+                const pendingQuestions = document.getElementById('pendingQuestions');
+                const questionsStatus = document.getElementById('questionsStatus');
+                pendingQuestions.textContent = data.questions.pending;
+                questionsStatus.textContent = data.questions.pending === 0 ? 
+                    'Sin preguntas pendientes' : 
+                    `${data.questions.urgent.length} urgentes`;
+                
+                // Actualizar productos
+                document.getElementById('outOfStock').textContent = data.products.out_of_stock;
+                document.getElementById('lowStock').textContent = 
+                    `${data.products.low_stock} con stock bajo`;
+
+                // Actualizar preguntas urgentes
+                updateUrgentQuestions(data.questions.urgent);
+
+                // Actualizar ventas recientes
+                updateRecentSales(data.sales.recent);
+
+                // Actualizar alertas de productos
+                updateProductAlerts(data.products.alerts);
+
+            } catch (error) {
+                console.error('Error cargando dashboard:', error);
+            }
+        }
+
+        function updateUrgentQuestions(questions) {
+            const container = document.getElementById('urgentQuestions');
+            
+            if (!questions || questions.length === 0) {
+                container.innerHTML = '<div class="text-gray-500 text-center py-4">No hay preguntas urgentes</div>';
+                return;
+            }
+
+            container.innerHTML = questions.map(q => `
+                <div class="border-l-4 border-orange-500 pl-4 py-2">
+                    <p class="font-medium">${q.text}</p>
+                    <div class="flex justify-between text-sm text-gray-500 mt-1">
+                        <span>${formatDate(q.date_created)}</span>
+                        <span>Hace ${q.hours_waiting}h</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateRecentSales(sales) {
+            const container = document.getElementById('recentSales');
+            
+            if (!sales || sales.length === 0) {
+                container.innerHTML = '<div class="text-gray-500 text-center py-4">No hay ventas recientes</div>';
+                return;
+            }
+
+            // Guardar las ventas en una variable global para accederlas desde el modal
+            window.salesData = {};
+            
+            container.innerHTML = sales.map(sale => {
+                // Guardar cada venta en el objeto global usando su ID como clave
+                window.salesData[sale.id] = sale;
+                
+                return `
+                    <div class="border-l-4 border-green-500 pl-4 py-2">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="font-medium">${sale.buyer.full_name || sale.buyer.nickname}</div>
+                                <div class="text-sm text-gray-600">
+                                    ${sale.date}
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <span class="font-bold">${formatCurrency(sale.total)}</span>
+                                <button 
+                                    onclick="showSaleDetails('${sale.id}')"
+                                    class="text-blue-600 hover:text-blue-800 text-sm"
+                                >
+                                    Ver detalle
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function showSaleDetails(saleId) {
+            const sale = window.salesData[saleId];
+            if (!sale) return;
+            
+            const modal = document.getElementById('saleDetailsModal');
+            const content = document.getElementById('saleDetailsContent');
+            
+            content.innerHTML = `
+                <div class="space-y-6">
+                    <!-- Header -->
+                    <div class="flex justify-between items-start pb-4 border-b">
+                        <div>
+                            <h3 class="text-xl font-bold">${sale.buyer.full_name || sale.buyer.nickname}</h3>
+                            <p class="text-gray-600">ID: ${sale.id}</p>
+                            <p class="text-gray-600">${sale.date}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xl font-bold">${formatCurrency(sale.total)}</p>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Productos -->
+                    <div>
+                        <h4 class="text-lg font-bold mb-4">Productos</h4>
+                        <div class="space-y-4">
+                            ${sale.items.map(item => `
+                                <div class="flex items-start space-x-4 p-4 bg-gray-50 rounded">
+                                    ${item.thumbnail ? `
+                                        <img src="${item.thumbnail}" 
+                                            alt="${item.title}" 
+                                            class="w-20 h-20 object-contain bg-white rounded">
+                                    ` : ''}
+                                    <div class="flex-1">
+                                        <div class="flex justify-between">
+                                            <div>
+                                                <h5 class="font-medium">${item.title}</h5>
+                                                <p class="text-sm text-gray-600">SKU: ${item.sku || 'No especificado'}</p>
+                                                <p class="text-sm text-gray-600">Cantidad: ${item.quantity}</p>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="font-medium">${formatCurrency(item.unit_price)} c/u</p>
+                                                <p class="text-sm text-gray-600">
+                                                    Subtotal: ${formatCurrency(item.unit_price * item.quantity)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+        }
+
+        function updateProductAlerts(alerts) {
+            const tbody = document.getElementById('productAlerts');
+            
+            if (!alerts || alerts.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-gray-500">
+                            No hay alertas de productos
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = alerts.map(alert => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">${alert.title}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-sm rounded ${
+                            alert.stock === 0 ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                        }">
+                            ${alert.type}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${alert.stock}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${alert.status}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="showProductDetails('${alert.id}')"
+                                class="text-blue-600 hover:text-blue-900">
+                            Ver detalles
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showProductDetails(productId) {
+            const modal = document.getElementById('productModal');
+            const content = document.getElementById('modalContent');
+            
+            modal.classList.remove('hidden');
+            content.innerHTML = `
+                <div class="animate-pulse">
+                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div class="space-y-3 mt-4">
+                        <div class="h-4 bg-gray-200 rounded"></div>
+                        <div class="h-4 bg-gray-200 rounded"></div>
+                        <div class="h-4 bg-gray-200 rounded"></div>
+                    </div>
+                </div>
+            `;
+            
+            fetch(`/api/products/${productId}/details`)
+                .then(response => response.json())
+                .then(product => {
+                    console.log('Producto recibido:', product);
+
+                    if (!product || product.error) {
+                        throw new Error(product.error || 'Error al cargar el producto');
+                    }
+
+                    content.innerHTML = `
+                        <div class="grid grid-cols-2 gap-4">
+                            ${product.thumbnail ? `
+                                <div class="col-span-2">
+                                    <img src="${product.thumbnail}" 
+                                         alt="${product.title}"
+                                         class="w-32 h-32 object-contain mx-auto bg-white rounded">
+                                </div>
+                            ` : ''}
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-500">Título</h4>
+                                <p>${product.title || 'No disponible'}</p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-500">SKU</h4>
+                                <p>${product.seller_custom_field || 'No especificado'}</p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-500">Precio</h4>
+                                <p>
+                                    ${product.promo_price ? 
+                                        `<span class="line-through text-gray-500">${formatCurrency(product.price)}</span> 
+                                        <span class="text-green-600">${formatCurrency(product.promo_price)}</span>` 
+                                        : formatCurrency(product.price)}
+                                </p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-500">Stock</h4>
+                                <p>${product.available_quantity !== undefined ? product.available_quantity : 'No disponible'}</p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-500">Estado</h4>
+                                <p>${product.status ? translateStatus(product.status) : 'No disponible'}</p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-500">Última Venta</h4>
+                                <p>${product.last_sale ? formatDate(product.last_sale) : 'Sin ventas recientes'}</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 border-t pt-4">
+                            <h4 class="text-sm font-semibold text-gray-500 mb-2">Acciones Rápidas</h4>
+                            <div class="flex space-x-2">
+                                <button 
+                                    onclick="updateProductStatus('${product.id}', '${product.status === 'active' ? 'paused' : 'active'}')"
+                                    class="px-4 py-2 text-sm text-white rounded ${
+                                        product.status === 'active' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'
+                                    }"
+                                >
+                                    ${product.status === 'active' ? 'Pausar' : 'Activar'}
+                                </button>
+                                ${product.permalink ? `
+                                    <a 
+                                        href="${product.permalink}" 
+                                        target="_blank"
+                                        class="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded"
+                                    >
+                                        Ver en MercadoLibre
+                                    </a>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    content.innerHTML = `
+                        <div class="text-red-500 text-center py-4">
+                            Error al cargar los detalles del producto: ${error.message}
+                        </div>
+                    `;
+                });
+        }
+
+        async function updateProductStatus(productId, newStatus) {
+            try {
+                const response = await fetch(`/api/products/${productId}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                if (response.ok) {
+                    closeModal();
+                    loadDashboard();
+                } else {
+                    throw new Error('Error actualizando estado');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error actualizando el estado del producto');
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Event listener para cerrar modal de producto con Escape
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    closeModal();
+                    closeSaleModal();
+                }
+            });
+
+            // Event listener para cerrar modal de producto haciendo clic fuera
+            document.getElementById('productModal').addEventListener('click', function(event) {
+                if (event.target === this) {
+                    closeModal();
+                }
+            });
+
+            // Event listener para cerrar modal de venta haciendo clic fuera
+            document.getElementById('saleDetailsModal').addEventListener('click', function(event) {
+                if (event.target === this) {
+                    closeSaleModal();
+                }
+            });
+        });
+
+        // Cargar datos iniciales
+        loadDashboard();
+
+        // Actualizar cada 5 minutos
+        setInterval(loadDashboard, 300000);
+    </script>
 </body>
 </html>

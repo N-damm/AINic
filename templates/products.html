@@ -1,4 +1,3 @@
-<!-- templates/products.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -16,6 +15,7 @@
                 <a href="/products" class="hover:text-gray-200">Productos</a>
                 <a href="/questions" class="hover:text-gray-200">Preguntas</a>
                 <a href="/metrics" class="hover:text-gray-200">Métricas</a>
+                <a href="/competition" class="hover:text-gray-200">Competencia</a>
             </div>
         </div>
     </nav>
@@ -77,6 +77,23 @@
         let isLoading = false;
         let hasMore = true;
         
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('es-AR', {
+                style: 'currency',
+                currency: 'ARS'
+            }).format(amount);
+        }
+
+        function translateStatus(status) {
+            const statusMap = {
+                'active': 'Activo',
+                'paused': 'Pausado',
+                'closed': 'Finalizado',
+                'under_review': 'En revisión'
+            };
+            return statusMap[status] || status;
+        }
+        
         async function loadProducts(replace = true) {
             if (isLoading) return;
             
@@ -88,6 +105,9 @@
                 const searchText = document.getElementById('searchInput').value.toLowerCase();
                 
                 const response = await fetch(`/api/products?offset=${currentOffset}&limit=20`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const data = await response.json();
                 
                 const tableBody = document.getElementById('productsTable');
@@ -100,14 +120,33 @@
                     tableBody.innerHTML = '';
                 }
                 
+                if (filteredProducts.length === 0 && replace) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-gray-500">
+                                No se encontraron productos
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
                 filteredProducts.forEach(product => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td class="border-t px-6 py-4">${product.id}</td>
                         <td class="border-t px-6 py-4">${product.title}</td>
-                        <td class="border-t px-6 py-4">$${product.price}</td>
+                        <td class="border-t px-6 py-4">
+                            ${product.promo_price ? 
+                                `<div class="flex flex-col">
+                                    <span class="line-through text-gray-500">${formatCurrency(product.price)}</span>
+                                    <span class="text-green-600">${formatCurrency(product.promo_price)}</span>
+                                </div>` 
+                                : formatCurrency(product.price)
+                            }
+                        </td>
                         <td class="border-t px-6 py-4">${product.available_quantity}</td>
-                        <td class="border-t px-6 py-4">${product.status}</td>
+                        <td class="border-t px-6 py-4">${translateStatus(product.status)}</td>
                         <td class="border-t px-6 py-4">
                             <a href="${product.permalink}" target="_blank" 
                                class="text-blue-600 hover:text-blue-800">
@@ -123,6 +162,13 @@
                 
             } catch (error) {
                 console.error('Error:', error);
+                document.getElementById('productsTable').innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-red-500">
+                            Error al cargar productos: ${error.message}
+                        </td>
+                    </tr>
+                `;
             } finally {
                 isLoading = false;
                 document.getElementById('loadingIndicator').classList.add('hidden');
@@ -148,6 +194,7 @@
             loadProducts();
         });
         
+        // Cargar productos iniciales
         loadProducts();
     </script>
 </body>
